@@ -1,0 +1,26 @@
+{
+  "total_annual_spend": 805749.68,
+  "monthly_average": 67145.81,
+  "by_team": {
+    "engineering": 288069.2,
+    "data": 227762.31,
+    "infra": 174427.14,
+    "staging": 115491.03
+  },
+  "by_service": {
+    "EC2": 262166.39,
+    "EKS": 218949.63,
+    "RDS": 175613.58,
+    "ElastiCache": 70160.87,
+    "S3": 35600.65,
+    "CloudFront": 26107.01,
+    "Lambda": 17151.55
+  },
+  "by_environment": {
+    "dev": 101067.84,
+    "production": 505894.41,
+    "staging": 198787.43
+  },
+  "total_potential_savings": 166842.12,
+  "savings_pct": 20.7
+}
