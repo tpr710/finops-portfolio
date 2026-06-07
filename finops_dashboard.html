@@ -1,553 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AcmeCo FinOps Dashboard 2024</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
-
-  :root {
-    --bg: #0a0e17;
-    --surface: #111827;
-    --border: #1e2d40;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --accent: #38bdf8;
-    --green: #34d399;
-    --amber: #fbbf24;
-    --red: #f87171;
-    --purple: #a78bfa;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    min-height: 100vh;
-    padding: 32px 24px;
-  }
-
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 32px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 20px;
-  }
-
-  .logo-area h1 {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-    color: var(--accent);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-
-  .logo-area h2 {
-    font-size: 22px;
-    font-weight: 300;
-    color: var(--text);
-  }
-
-  .header-meta {
-    text-align: right;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.8;
-  }
-
-  /* KPI row */
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .kpi {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .kpi::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-  }
-  .kpi.blue::before { background: var(--accent); }
-  .kpi.green::before { background: var(--green); }
-  .kpi.amber::before { background: var(--amber); }
-  .kpi.red::before { background: var(--red); }
-
-  .kpi-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-
-  .kpi-value {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .kpi-sub {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 4px;
-  }
-
-  .kpi-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-family: 'IBM Plex Mono', monospace;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-top: 8px;
-  }
-  .badge-green { background: rgba(52,211,153,0.15); color: var(--green); }
-  .badge-red { background: rgba(248,113,113,0.15); color: var(--red); }
-  .badge-amber { background: rgba(251,191,36,0.15); color: var(--amber); }
-
-  /* Charts grid */
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .charts-grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-  }
-
-  .card-title {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 16px;
-  }
-
-  canvas { max-height: 220px; }
-
-  /* Recommendations */
-  .rec-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .rec-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    position: relative;
-  }
-
-  .rec-priority {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    margin-bottom: 10px;
-  }
-  .p1 { color: var(--red); }
-  .p2 { color: var(--amber); }
-  .p3 { color: var(--green); }
-
-  .rec-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-
-  .rec-desc {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.6;
-    margin-bottom: 14px;
-  }
-
-  .rec-savings {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--green);
-  }
-
-  .rec-meta {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-
-  /* Table */
-  .table-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 24px;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-
-  th {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-align: left;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  td {
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(30,45,64,0.5);
-    color: var(--text);
-  }
-
-  tr:last-child td { border-bottom: none; }
-
-  .bar-cell {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .bar-bg {
-    flex: 1;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: var(--accent);
-  }
-
-  footer {
-    text-align: center;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AcmeCo FinOps Cloud Cost Optimization Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
 
-<header>
-  <div class="logo-area">
-    <h1>FinOps Dashboard</h1>
-    <h2>AcmeCo Cloud Cost Analysis</h2>
-  </div>
-  <div class="header-meta">
-    Period: Jan – Dec 2024<br>
-    Platform: AWS<br>
-    Last updated: 2024-12-31
-  </div>
-</header>
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <span class="text-emerald-400">⚡</span> AcmeCo FinOps Hub
+                </h1>
+                <p class="text-xs text-slate-400 mt-0.5">AWS Cloud Cost Diagnostics & Optimization Case Study</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="bg-emerald-500/10 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-full border border-emerald-500/20 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Potential Savings: $166,842 / yr
+                </span>
+            </div>
+        </div>
+    </header>
 
-<!-- KPIs -->
-<div class="kpi-row">
-  <div class="kpi blue">
-    <div class="kpi-label">Total Annual Spend</div>
-    <div class="kpi-value">$805,750</div>
-    <div class="kpi-sub">$67,146/month avg</div>
-    <span class="kpi-badge badge-red">↑ 17.8% YoY</span>
-  </div>
-  <div class="kpi green">
-    <div class="kpi-label">Potential Savings</div>
-    <div class="kpi-value">$166,842</div>
-    <div class="kpi-sub">3 opportunities identified</div>
-    <span class="kpi-badge badge-green">20.7% of spend</span>
-  </div>
-  <div class="kpi amber">
-    <div class="kpi-label">Non-Prod Spend</div>
-    <div class="kpi-value">37.2%</div>
-    <div class="kpi-sub">$299,855/year</div>
-    <span class="kpi-badge badge-amber">Benchmark: 25%</span>
-  </div>
-  <div class="kpi red">
-    <div class="kpi-label">Top Service</div>
-    <div class="kpi-value">EC2</div>
-    <div class="kpi-sub">$262,166 · 32.5%</div>
-    <span class="kpi-badge badge-amber">RI opportunity</span>
-  </div>
-</div>
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Annual Spend</p>
+                <h3 class="text-2xl font-bold text-white mt-1">$805,750</h3>
+                <p class="text-xs text-slate-500 mt-1">Across all standard AWS elements</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Avg. Monthly Run-Rate</p>
+                <h3 class="text-2xl font-bold text-white mt-1">$67,146</h3>
+                <p class="text-xs text-amber-400 flex items-center gap-1 mt-1 font-medium">
+                    ↑ 17.8% Q1 vs Q4 growth trend
+                </p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm ring-1 ring-emerald-500/30">
+                <p class="text-xs font-medium text-emerald-400 uppercase tracking-wider">Identified Waste</p>
+                <h3 class="text-2xl font-bold text-emerald-400 mt-1">$166,842</h3>
+                <p class="text-xs text-slate-400 mt-1">20.7% total cost reduction path</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Non-Prod Run Costs</p>
+                <h3 class="text-2xl font-bold text-white mt-1">37.2%</h3>
+                <p class="text-xs text-rose-400 mt-1">High waste profile in Staging/Dev</p>
+            </div>
+        </section>
 
-<!-- Charts row 1 -->
-<div class="charts-grid">
-  <div class="card">
-    <div class="card-title">Monthly Spend Trend</div>
-    <canvas id="trendChart"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">Spend by Environment</div>
-    <canvas id="envChart"></canvas>
-  </div>
-</div>
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <div class="mb-4">
+                    <h4 class="text-base font-semibold text-white">Month-over-Month Cost Trajectory (2024)</h4>
+                    <p class="text-xs text-slate-400">Consistent upward run-rate expansion observed across fiscal year</p>
+                </div>
+                <div class="h-64">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
 
-<!-- Charts row 2 -->
-<div class="charts-grid-3">
-  <div class="card">
-    <div class="card-title">Spend by Team</div>
-    <canvas id="teamChart"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">Spend by Service</div>
-    <canvas id="serviceChart"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">Savings Breakdown</div>
-    <canvas id="savingsChart"></canvas>
-  </div>
-</div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                <div>
+                    <h4 class="text-base font-semibold text-white">Cost Distribution Matrix</h4>
+                    <p class="text-xs text-slate-400 mb-4">Functional spend segmented by product team allocation</p>
+                </div>
+                <div class="h-52 flex justify-center">
+                    <canvas id="teamChart"></canvas>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs text-center mt-4 pt-4 border-t border-slate-800">
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1.5"></span>Eng: 35.8%</div>
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-cyan-400 mr-1.5"></span>Data: 28.3%</div>
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-purple-500 mr-1.5"></span>Infra: 21.6%</div>
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-pink-500 mr-1.5"></span>Stage: 14.3%</div>
+                </div>
+            </div>
+        </section>
 
-<!-- Recommendations -->
-<div class="rec-grid">
-  <div class="rec-card">
-    <div class="rec-priority p1">● PRIORITY 1 — HIGH</div>
-    <div class="rec-title">Schedule Staging Compute</div>
-    <div class="rec-desc">Staging EC2 + EKS runs 24/7 but only needed Mon–Fri 8am–6pm. Implement AWS Instance Scheduler to turn off overnight and weekends.</div>
-    <div class="rec-savings">$76,947/yr</div>
-    <div class="rec-meta">Effort: Low · Timeline: 30 days · Risk: None</div>
-  </div>
-  <div class="rec-card">
-    <div class="rec-priority p2">● PRIORITY 2 — MEDIUM</div>
-    <div class="rec-title">Rightsize Dev Instances</div>
-    <div class="rec-desc">Dev instances are provisioned at production size. CloudWatch shows avg CPU &lt;15%. Downsize to next instance tier for ~40% savings.</div>
-    <div class="rec-savings">$40,427/yr</div>
-    <div class="rec-meta">Effort: Medium · Timeline: 60 days · Risk: Low</div>
-  </div>
-  <div class="rec-card">
-    <div class="rec-priority p3">● PRIORITY 3 — QUICK WIN</div>
-    <div class="rec-title">Reserved Instances (Prod EC2)</div>
-    <div class="rec-desc">Prod EC2 usage is stable and predictable. Purchase 1-year Standard RIs for baseline fleet to capture 30% discount vs on-demand.</div>
-    <div class="rec-savings">$49,468/yr</div>
-    <div class="rec-meta">Effort: Low · Timeline: 30 days · Risk: None</div>
-  </div>
-</div>
+        <section class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+            <div class="p-6 border-b border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-white">Targeted Savings Realization Blueprint</h3>
+                    <p class="text-xs text-slate-400">Immediate, low-friction optimization workflows ready for engineering execution</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block">Total Realizable Yield</span>
+                    <span class="text-xl font-black text-emerald-400">$166,842 / year</span>
+                </div>
+            </div>
+            
+            <div class="divide-y divide-slate-800">
+                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:bg-slate-850/30 transition-all">
+                    <div class="space-y-1 max-w-2xl">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide">Resource Scheduling</span>
+                            <h4 class="text-base font-semibold text-white">Automate Staging Compute Power Cycles</h4>
+                        </div>
+                        <p class="text-sm text-slate-300">Implement automated instance state boundaries to shut down non-essential Staging EC2 and EKS nodes overnight and over weekends (off ~65% of total weekly calendar hours).</p>
+                    </div>
+                    <div class="text-left md:text-right min-w-[160px]">
+                        <span class="text-xs text-slate-500 block">Estimated Savings</span>
+                        <span class="text-lg font-bold text-emerald-400">$76,947 <span class="text-xs text-slate-400 font-normal">/ yr</span></span>
+                        <span class="text-xs text-slate-400 block mt-0.5">65% reduction in Env spend</span>
+                    </div>
+                </div>
 
-<!-- Service table -->
-<div class="table-card">
-  <div class="card-title">Service Cost Breakdown</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Service</th>
-        <th>Annual Spend</th>
-        <th>% of Total</th>
-        <th>Distribution</th>
-      </tr>
-    </thead>
-    <tbody id="serviceTable"></tbody>
-  </table>
-</div>
+                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:bg-slate-850/30 transition-all">
+                    <div class="space-y-1 max-w-2xl">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">Rightsizing</span>
+                            <h4 class="text-base font-semibold text-white">Scale Down Over-Provisioned Dev Assets</h4>
+                        </div>
+                        <p class="text-sm text-slate-300">Downsize consistently underutilized compute nodes in the development environments from large configurations to optimized instances based on historical CPU/memory profiling metrics.</p>
+                    </div>
+                    <div class="text-left md:text-right min-w-[160px]">
+                        <span class="text-xs text-slate-500 block">Estimated Savings</span>
+                        <span class="text-lg font-bold text-emerald-400">$40,427 <span class="text-xs text-slate-400 font-normal">/ yr</span></span>
+                        <span class="text-xs text-slate-400 block mt-0.5">40% drop in waste parameters</span>
+                    </div>
+                </div>
 
-<footer>ACMECO FINOPS PORTFOLIO PROJECT · DATA IS HYPOTHETICAL · BUILT FOR PORTFOLIO DEMONSTRATION</footer>
+                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:bg-slate-850/30 transition-all">
+                    <div class="space-y-1 max-w-2xl">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-wide">Commitment Management</span>
+                            <h4 class="text-base font-semibold text-white">Procure 1-Year Reserved Instances (RIs) for Prod EC2</h4>
+                        </div>
+                        <p class="text-sm text-slate-300">Lock in baseline predictable production compute layers with a 1-year, No Upfront Reserved Instance contract. Mitigates volatile premium on-demand pricing rates without architecture changes.</p>
+                    </div>
+                    <div class="text-left md:text-right min-w-[160px]">
+                        <span class="text-xs text-slate-500 block">Estimated Savings</span>
+                        <span class="text-lg font-bold text-emerald-400">$49,468 <span class="text-xs text-slate-400 font-normal">/ yr</span></span>
+                        <span class="text-xs text-slate-400 block mt-0.5">30% discount on baseline EC2</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
-<script>
-const COLORS = {
-  blue: '#38bdf8',
-  green: '#34d399',
-  purple: '#a78bfa',
-  amber: '#fbbf24',
-  red: '#f87171',
-  teal: '#2dd4bf',
-  pink: '#f472b6',
-};
+    <script>
+        // 1. Month-over-Month Trend Configuration
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mar', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [{
+                    label: 'AWS Combined Spend ($)',
+                    data: [61126, 62469, 63210, 65143, 66934, 66955, 66185, 70548, 68451, 71389, 71321, 72018],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#10b981',
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' }, min: 50000 }
+                }
+            }
+        });
 
-const gridColor = 'rgba(30,45,64,0.8)';
-const textColor = '#64748b';
-
-Chart.defaults.color = textColor;
-Chart.defaults.font.family = "'IBM Plex Mono', monospace";
-Chart.defaults.font.size = 10;
-
-// Trend chart
-new Chart(document.getElementById('trendChart'), {
-  type: 'line',
-  data: {
-    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-    datasets: [{
-      label: 'Monthly Spend',
-      data: [61126, 62469, 63210, 65143, 66934, 66955, 66185, 70548, 68451, 71389, 71321, 72018],
-      borderColor: COLORS.blue,
-      backgroundColor: 'rgba(56,189,248,0.08)',
-      borderWidth: 2,
-      pointBackgroundColor: COLORS.blue,
-      pointRadius: 3,
-      fill: true,
-      tension: 0.3,
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: gridColor } },
-      y: {
-        grid: { color: gridColor },
-        ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' }
-      }
-    }
-  }
-});
-
-// Env donut
-new Chart(document.getElementById('envChart'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Production', 'Staging', 'Dev'],
-    datasets: [{
-      data: [505894, 198787, 101068],
-      backgroundColor: [COLORS.blue, COLORS.amber, COLORS.red],
-      borderWidth: 0,
-      hoverOffset: 6,
-    }]
-  },
-  options: {
-    responsive: true,
-    cutout: '65%',
-    plugins: {
-      legend: { position: 'bottom', labels: { padding: 16 } },
-      tooltip: { callbacks: { label: ctx => ' $' + ctx.raw.toLocaleString() } }
-    }
-  }
-});
-
-// Team bar
-new Chart(document.getElementById('teamChart'), {
-  type: 'bar',
-  data: {
-    labels: ['Engineering', 'Data', 'Infra', 'Staging'],
-    datasets: [{
-      data: [288069, 227762, 174427, 115491],
-      backgroundColor: [COLORS.blue, COLORS.purple, COLORS.teal, COLORS.amber],
-      borderRadius: 4,
-      borderWidth: 0,
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: { color: gridColor }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
-    }
-  }
-});
-
-// Service bar
-new Chart(document.getElementById('serviceChart'), {
-  type: 'bar',
-  data: {
-    labels: ['EC2', 'EKS', 'RDS', 'ElastiCache', 'S3', 'CloudFront', 'Lambda'],
-    datasets: [{
-      data: [262166, 218950, 175614, 70161, 35601, 26107, 17152],
-      backgroundColor: COLORS.blue,
-      borderRadius: 4,
-      borderWidth: 0,
-    }]
-  },
-  options: {
-    indexAxis: 'y',
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { color: gridColor }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } },
-      y: { grid: { display: false } }
-    }
-  }
-});
-
-// Savings bar
-new Chart(document.getElementById('savingsChart'), {
-  type: 'bar',
-  data: {
-    labels: ['Schedule\nStaging', 'Rightsize\nDev', 'Reserved\nInstances'],
-    datasets: [{
-      data: [76947, 40427, 49468],
-      backgroundColor: [COLORS.red, COLORS.amber, COLORS.green],
-      borderRadius: 4,
-      borderWidth: 0,
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false } },
-      y: { grid: { color: gridColor }, ticks: { callback: v => '$' + (v/1000).toFixed(0) + 'k' } }
-    }
-  }
-});
-
-// Service table
-const services = [
-  { name: 'EC2', spend: 262166, pct: 32.5 },
-  { name: 'EKS', spend: 218950, pct: 27.2 },
-  { name: 'RDS', spend: 175614, pct: 21.8 },
-  { name: 'ElastiCache', spend: 70161, pct: 8.7 },
-  { name: 'S3', spend: 35601, pct: 4.4 },
-  { name: 'CloudFront', spend: 26107, pct: 3.2 },
-  { name: 'Lambda', spend: 17152, pct: 2.1 },
-];
-const maxSpend = services[0].spend;
-const tbody = document.getElementById('serviceTable');
-services.forEach(s => {
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><strong>${s.name}</strong></td>
-    <td style="font-family:'IBM Plex Mono',monospace">$${s.spend.toLocaleString()}</td>
-    <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${s.pct}%</td>
-    <td><div class="bar-cell">
-      <div class="bar-bg"><div class="bar-fill" style="width:${(s.spend/maxSpend)*100}%"></div></div>
-    </div></td>
-  `;
-  tbody.appendChild(tr);
-});
-</script>
+        // 2. Functional Team Allocation configuration
+        const teamCtx = document.getElementById('teamChart').getContext('2d');
+        new Chart(teamCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Engineering', 'Data Science', 'Infrastructure', 'Staging Support'],
+                datasets: [{
+                    data: [288069, 227762, 174427, 115491],
+                    backgroundColor: ['#6366f1', '#22d3ee', '#a855f7', '#ec4899'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                cutout: '75%'
+            }
+        });
+    </script>
 </body>
 </html>
