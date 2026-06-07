@@ -3,24 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AcmeCo FinOps Cloud Cost Optimization Dashboard</title>
+    <title>Enterprise Cloud Infrastructure & FinOps Optimization Dashboard</title>
+    <!-- Tailwind CSS for sleek utility styling -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js for canvas rendering -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
 
+    <!-- Header -->
     <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <span class="text-emerald-400">⚡</span> AcmeCo FinOps Hub
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <span class="text-cyan-400">📊</span> AcmeCo Cloud FinOps Hub
                 </h1>
-                <p class="text-xs text-slate-400 mt-0.5">AWS Cloud Cost Diagnostics & Optimization Case Study</p>
+                <p class="text-xs text-slate-400 mt-0.5">Automated Cost Diagnostics & Multi-Environment Telemetry</p>
             </div>
             <div class="flex items-center gap-3">
                 <span class="bg-emerald-500/10 text-emerald-400 text-xs font-semibold px-3 py-1.5 rounded-full border border-emerald-500/20 flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Potential Savings: $166,842 / yr
+                    Total Realizable Savings: $166,842 / yr
                 </span>
             </div>
         </div>
@@ -28,169 +31,219 @@
 
     <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
         
+        <!-- Standard KPI Summary Tiles -->
         <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Annual Spend</p>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Gross Annual Run-Rate</p>
                 <h3 class="text-2xl font-bold text-white mt-1">$805,750</h3>
-                <p class="text-xs text-slate-500 mt-1">Across all standard AWS elements</p>
+                <p class="text-xs text-slate-500 mt-1">Aggregated AWS Core Spend</p>
             </div>
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Avg. Monthly Run-Rate</p>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Mean Monthly Spend</p>
                 <h3 class="text-2xl font-bold text-white mt-1">$67,146</h3>
-                <p class="text-xs text-amber-400 flex items-center gap-1 mt-1 font-medium">
-                    ↑ 17.8% Q1 vs Q4 growth trend
-                </p>
+                <p class="text-xs text-amber-400 mt-1">↑ 17.8% Q1 to Q4 Expansion</p>
             </div>
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm ring-1 ring-emerald-500/30">
-                <p class="text-xs font-medium text-emerald-400 uppercase tracking-wider">Identified Waste</p>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 ring-1 ring-emerald-500/30">
+                <p class="text-xs font-medium text-emerald-400 uppercase tracking-wider">Recoverable Leakage</p>
                 <h3 class="text-2xl font-bold text-emerald-400 mt-1">$166,842</h3>
-                <p class="text-xs text-slate-400 mt-1">20.7% total cost reduction path</p>
+                <p class="text-xs text-slate-400 mt-1">20.7% Total Optimization Pool</p>
             </div>
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
-                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Non-Prod Run Costs</p>
-                <h3 class="text-2xl font-bold text-white mt-1">37.2%</h3>
-                <p class="text-xs text-rose-400 mt-1">High waste profile in Staging/Dev</p>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Non-Prod Waste Profile</p>
+                <h3 class="text-2xl font-bold text-rose-400 mt-1">37.2%</h3>
+                <p class="text-xs text-slate-500 mt-1">Staging & Dev Environment Focus</p>
             </div>
         </section>
 
+        <!-- Core Infrastructure Allocation Grid -->
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- MoM Spend Trajectory -->
             <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5">
                 <div class="mb-4">
-                    <h4 class="text-base font-semibold text-white">Month-over-Month Cost Trajectory (2024)</h4>
-                    <p class="text-xs text-slate-400">Consistent upward run-rate expansion observed across fiscal year</p>
+                    <h4 class="text-sm font-semibold text-white uppercase tracking-wide">Trailing 12-Month Consolidated Cost Trend</h4>
+                    <p class="text-xs text-slate-400">Chronological distribution tracking cloud infrastructure scale across fiscal year</p>
                 </div>
                 <div class="h-64">
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
 
+            <!-- Team Spend Allocation -->
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
                 <div>
-                    <h4 class="text-base font-semibold text-white">Cost Distribution Matrix</h4>
-                    <p class="text-xs text-slate-400 mb-4">Functional spend segmented by product team allocation</p>
+                    <h4 class="text-sm font-semibold text-white uppercase tracking-wide">Cost Attribution Matrix</h4>
+                    <p class="text-xs text-slate-400 mb-4">Functional cloud spend mapped to engineering business units</p>
                 </div>
-                <div class="h-52 flex justify-center">
+                <div class="h-48 flex justify-center">
                     <canvas id="teamChart"></canvas>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs text-center mt-4 pt-4 border-t border-slate-800">
-                    <div><span class="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1.5"></span>Eng: 35.8%</div>
-                    <div><span class="inline-block w-2 h-2 rounded-full bg-cyan-400 mr-1.5"></span>Data: 28.3%</div>
-                    <div><span class="inline-block w-2 h-2 rounded-full bg-purple-500 mr-1.5"></span>Infra: 21.6%</div>
-                    <div><span class="inline-block w-2 h-2 rounded-full bg-pink-500 mr-1.5"></span>Stage: 14.3%</div>
+                <div class="grid grid-cols-2 gap-2 text-xs pt-4 border-t border-slate-800 mt-4">
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1"></span>Eng: 35.8%</div>
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-cyan-400 mr-1"></span>Data: 28.3%</div>
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-purple-500 mr-1"></span>Infra: 21.6%</div>
+                    <div><span class="inline-block w-2 h-2 rounded-full bg-pink-500 mr-1"></span>Stage: 14.3%</div>
                 </div>
             </div>
         </section>
 
-        <section class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-            <div class="p-6 border-b border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h3 class="text-lg font-semibold text-white">Targeted Savings Realization Blueprint</h3>
-                    <p class="text-xs text-slate-400">Immediate, low-friction optimization workflows ready for engineering execution</p>
-                </div>
-                <div class="text-right">
-                    <span class="text-xs text-slate-400 block">Total Realizable Yield</span>
-                    <span class="text-xl font-black text-emerald-400">$166,842 / year</span>
+        <!-- Environment and Service Metrics Breakdown Tables -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Environment Breakdown -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <h4 class="text-sm font-semibold text-white uppercase tracking-wide mb-3">Environment Cost Density</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 font-medium">
+                                <th class="pb-2">Environment Tier</th>
+                                <th class="pb-2 text-right">Annual Cost</th>
+                                <th class="pb-2 text-right">Allocation</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/50">
+                            <tr><td class="py-2.5 font-medium">Production</td><td class="py-2.5 text-right">$505,894</td><td class="py-2.5 text-right text-emerald-400">62.8%</td></tr>
+                            <tr><td class="py-2.5 font-medium">Staging</td><td class="py-2.5 text-right">$198,787</td><td class="py-2.5 text-right text-amber-400">24.7%</td></tr>
+                            <tr><td class="py-2.5 font-medium">Development</td><td class="py-2.5 text-right">$101,068</td><td class="py-2.5 text-right text-rose-400">12.5%</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            
-            <div class="divide-y divide-slate-800">
-                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:bg-slate-850/30 transition-all">
-                    <div class="space-y-1 max-w-2xl">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide">Resource Scheduling</span>
-                            <h4 class="text-base font-semibold text-white">Automate Staging Compute Power Cycles</h4>
-                        </div>
-                        <p class="text-sm text-slate-300">Implement automated instance state boundaries to shut down non-essential Staging EC2 and EKS nodes overnight and over weekends (off ~65% of total weekly calendar hours).</p>
+
+            <!-- Service Cost Registry Matrix -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <h4 class="text-sm font-semibold text-white uppercase tracking-wide mb-3">Core Platform Service Ledger</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 font-medium">
+                                <th class="pb-2">Cloud Service Module</th>
+                                <th class="pb-2 text-right">Total Expenditure</th>
+                                <th class="pb-2 text-right">Global Share</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/50">
+                            <tr><td class="py-2 font-medium">Compute (EC2)</td><td class="py-2 text-right">$262,166</td><td class="py-2 text-right text-slate-400">32.5%</td></tr>
+                            <tr><td class="py-2 font-medium">Containers (EKS)</td><td class="py-2 text-right">$218,950</td><td class="py-2 text-right text-slate-400">27.2%</td></tr>
+                            <tr><td class="py-2 font-medium">Databases (RDS)</td><td class="py-2 text-right">$175,614</td><td class="py-2 text-right text-slate-400">21.8%</td></tr>
+                            <tr><td class="py-2 font-medium">Caching (ElastiCache)</td><td class="py-2 text-right">$70,161</td><td class="py-2 text-right text-slate-400">8.7%</td></tr>
+                            <tr><td class="py-2 font-medium">Storage (S3)</td><td class="py-2 text-right">$35,601</td><td class="py-2 text-right text-slate-400">4.4%</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- GenAI Token Economics Matrix -->
+        <section class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl ring-1 ring-cyan-500/20">
+            <div class="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-900 to-slate-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-base font-bold text-white tracking-wide uppercase flex items-center gap-2">
+                        <span class="text-cyan-400 text-lg">🧠</span> AI Workload FinOps: Token Economics & Diagnostics
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">Audit telemetry isolating LLM inferencing inefficiencies, prompt payloads, and architecture optimization vectors</p>
+                </div>
+                <div class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs px-3 py-1.5 rounded-lg font-mono font-semibold">
+                    Token Inefficiency Reduced: 42.1%
+                </div>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- AI Waste Categorization Chart -->
+                <div class="flex flex-col justify-between">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Cost Leakage Drivers</h4>
+                        <p class="text-xs text-slate-400">Categorized distribution of underoptimized LLM expenditure vectors across active pipelines</p>
                     </div>
-                    <div class="text-left md:text-right min-w-[160px]">
-                        <span class="text-xs text-slate-500 block">Estimated Savings</span>
-                        <span class="text-lg font-bold text-emerald-400">$76,947 <span class="text-xs text-slate-400 font-normal">/ yr</span></span>
-                        <span class="text-xs text-slate-400 block mt-0.5">65% reduction in Env spend</span>
+                    <div class="h-44 mt-4 flex justify-center">
+                        <canvas id="aiWasteChart"></canvas>
                     </div>
                 </div>
 
-                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:bg-slate-850/30 transition-all">
-                    <div class="space-y-1 max-w-2xl">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">Rightsizing</span>
-                            <h4 class="text-base font-semibold text-white">Scale Down Over-Provisioned Dev Assets</h4>
+                <!-- LLM Architecture Realignment Strategy -->
+                <div class="lg:col-span-2 space-y-4">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Dynamic Model Re-Tiering Framework</h4>
+                    
+                    <div class="space-y-3">
+                        <div class="p-4 rounded-xl bg-slate-950 border border-slate-850 flex flex-col sm:flex-row justify-between gap-4">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                                    <h5 class="text-xs font-bold text-white">Semantic Caching Activation (Application Tier)</h5>
+                                </div>
+                                <p class="text-xs text-slate-400 max-w-xl">Intercepting repetitive downstream requests using vector semantic similarity matching. Avoids hitting expensive API inferencing endpoints for identical or highly redundant input queries.</p>
+                            </div>
+                            <div class="text-left sm:text-right sm:min-w-[120px]">
+                                <span class="text-[10px] text-slate-500 block uppercase font-mono">Projected Yield</span>
+                                <span class="text-sm font-bold text-cyan-400">$24,150 / yr</span>
+                            </div>
                         </div>
-                        <p class="text-sm text-slate-300">Downsize consistently underutilized compute nodes in the development environments from large configurations to optimized instances based on historical CPU/memory profiling metrics.</p>
-                    </div>
-                    <div class="text-left md:text-right min-w-[160px]">
-                        <span class="text-xs text-slate-500 block">Estimated Savings</span>
-                        <span class="text-lg font-bold text-emerald-400">$40,427 <span class="text-xs text-slate-400 font-normal">/ yr</span></span>
-                        <span class="text-xs text-slate-400 block mt-0.5">40% drop in waste parameters</span>
-                    </div>
-                </div>
 
-                <div class="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:bg-slate-850/30 transition-all">
-                    <div class="space-y-1 max-w-2xl">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-wide">Commitment Management</span>
-                            <h4 class="text-base font-semibold text-white">Procure 1-Year Reserved Instances (RIs) for Prod EC2</h4>
+                        <div class="p-4 rounded-xl bg-slate-950 border border-slate-850 flex flex-col sm:flex-row justify-between gap-4">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                                    <h5 class="text-xs font-bold text-white">LLM Router & Model Cascade Architecture</h5>
+                                </div>
+                                <p class="text-xs text-slate-400 max-w-xl">Implementing runtime middleware logic to evaluate request complexity, dynamically routing simple tasks (classification, entity extraction) to small, optimized models instead of flagship tiers by default.</p>
+                            </div>
+                            <div class="text-left sm:text-right sm:min-w-[120px]">
+                                <span class="text-[10px] text-slate-500 block uppercase font-mono">Projected Yield</span>
+                                <span class="text-sm font-bold text-cyan-400">$38,900 / yr</span>
+                            </div>
                         </div>
-                        <p class="text-sm text-slate-300">Lock in baseline predictable production compute layers with a 1-year, No Upfront Reserved Instance contract. Mitigates volatile premium on-demand pricing rates without architecture changes.</p>
-                    </div>
-                    <div class="text-left md:text-right min-w-[160px]">
-                        <span class="text-xs text-slate-500 block">Estimated Savings</span>
-                        <span class="text-lg font-bold text-emerald-400">$49,468 <span class="text-xs text-slate-400 font-normal">/ yr</span></span>
-                        <span class="text-xs text-slate-400 block mt-0.5">30% discount on baseline EC2</span>
                     </div>
                 </div>
             </div>
         </section>
     </main>
 
+    <!-- Visual Layer Chart Engine Configurations -->
     <script>
-        // 1. Month-over-Month Trend Configuration
         const trendCtx = document.getElementById('trendChart').getContext('2d');
         new Chart(trendCtx, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mar', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                 datasets: [{
-                    label: 'AWS Combined Spend ($)',
                     data: [61126, 62469, 63210, 65143, 66934, 66955, 66185, 70548, 68451, 71389, 71321, 72018],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                    borderWidth: 3,
+                    borderColor: '#22d3ee',
+                    backgroundColor: 'rgba(34, 211, 238, 0.03)',
+                    borderWidth: 2.5,
                     fill: true,
-                    tension: 0.35,
-                    pointBackgroundColor: '#10b981',
-                    pointHoverRadius: 6
+                    tension: 0.3,
+                    pointBackgroundColor: '#22d3ee'
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
-                    y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' }, min: 50000 }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }, y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } } } }
         });
 
-        // 2. Functional Team Allocation configuration
         const teamCtx = document.getElementById('teamChart').getContext('2d');
         new Chart(teamCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Engineering', 'Data Science', 'Infrastructure', 'Staging Support'],
+                labels: ['Eng', 'Data', 'Infra', 'Staging'],
                 datasets: [{
                     data: [288069, 227762, 174427, 115491],
                     backgroundColor: ['#6366f1', '#22d3ee', '#a855f7', '#ec4899'],
-                    borderWidth: 0,
-                    hoverOffset: 4
+                    borderWidth: 0
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                cutout: '75%'
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '78%' }
+        });
+
+        // AI Cost Leakage Breakdown
+        const aiCtx = document.getElementById('aiWasteChart').getContext('2d');
+        new Chart(aiCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Unoptimized Model Selection', 'Prompt Payload Bloat', 'Missing Semantic Caching', 'Oversized Retrieval Window', 'Output Generation Runaway'],
+                datasets: [{
+                    data: [38, 22, 18, 14, 8],
+                    backgroundColor: ['#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     </script>
 </body>
