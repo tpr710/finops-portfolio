@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Azure Allocation Check</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="mark" aria-hidden="true">F</div>
+      <div><p class="eyebrow">FINOPS TOOLKIT · AZURE PILOT</p><h1>Allocation Check</h1></div>
+      <span class="mode">READ ONLY · FILES STAY IN YOUR BROWSER</span>
+    </header>
+
+    <section class="intro">
+      <div><p class="eyebrow">CLOUD COST VISIBILITY</p><h2>Find spend that needs an owner.</h2><p>Load Azure cost data, set a tag policy, and optionally add resource inventory and approved hierarchy mappings. Analysis stays in your browser.</p></div>
+      <a href="#how-it-works">How it works <span aria-hidden="true">↓</span></a>
+    </section>
+
+    <section class="workspace" aria-label="Analyze Azure export">
+      <div class="setup">
+        <div class="step-title"><span>01</span><div><h3>Choose your data</h3><p>Azure Cost Management export · CSV</p></div></div>
+        <label class="dropzone" id="dropzone" for="file-input">
+          <span class="upload-icon" aria-hidden="true">↑</span>
+          <strong>Drop a CSV export here</strong>
+          <span class="browse-row">or <span class="browse-button">browse files</span></span>
+          <input id="file-input" type="file" accept=".csv,text/csv" aria-label="Choose Azure cost export CSV">
+          <small id="file-name">Your file is analyzed locally and is not uploaded.</small>
+          <small id="file-summary" class="file-summary" aria-live="polite"></small>
+        </label>
+        <div class="optional-files">
+          <label class="optional-file" for="inventory-file"><span>Optional resource inventory CSV</span><small>ResourceId, SubscriptionId, ResourceGroup, Tags</small><input id="inventory-file" type="file" accept=".csv,text/csv"><small id="inventory-name">Not selected</small></label>
+          <label class="optional-file" for="scope-file"><span>Optional approved hierarchy mappings CSV</span><small>ScopeType, ScopeId, ParentScopeId, Tags</small><input id="scope-file" type="file" accept=".csv,text/csv"><small id="scope-name">Not selected</small></label>
+        </div>
+        <div class="field-row">
+          <label for="tag-key">Allocation tag key</label>
+          <input id="tag-key" type="text" value="CostCenter" placeholder="e.g. CostCenter">
+          <p>Used to measure spend that has an approved owner.</p>
+        </div>
+        <div class="field-row">
+          <label for="required-tags">Other required tags</label>
+          <textarea id="required-tags" rows="2" placeholder="Environment&#10;Application"></textarea>
+          <p>One tag key per line. Leave blank if none are required.</p>
+        </div>
+        <div class="field-row">
+          <label for="allowed-values">Allowed values (optional)</label>
+          <textarea id="allowed-values" rows="3" placeholder="CostCenter=CC-100|CC-200&#10;Environment=Production|Development"></textarea>
+          <p>One rule per line: TagKey=value1|value2. Keys without a rule accept any non-empty value.</p>
+        </div>
+        <button id="analyze" class="primary" disabled>Analyze export <span aria-hidden="true">→</span></button>
+        <p id="status" class="status" role="status" aria-live="polite">Select an Azure CSV export to begin.</p>
+      </div>
+
+      <div class="results" id="results">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span><i>✓</i></div>
+          <h3>Your allocation picture will appear here</h3>
+          <p>We’ll summarize spend with and without the selected tag, then list the records that need review.</p>
+          <button id="sample-button" class="text-button">Explore with sample data <span aria-hidden="true">↗</span></button>
+        </div>
+        <div id="report" hidden></div>
+      </div>
+    </section>
+
+    <section class="how" id="how-it-works">
+      <p class="eyebrow">THE FIRST BUILD SLICE</p><h2>Useful now. Ready to grow.</h2>
+      <div class="how-grid">
+        <article><span>01</span><h3>Bring client rules</h3><p>Set required tags and approved values for the client’s allocation policy.</p></article>
+        <article><span>02</span><h3>Add allocation evidence</h3><p>Join cost rows to resource inventory and approved parent-scope mappings.</p></article>
+        <article><span>03</span><h3>Deliver an action plan</h3><p>Download a client-ready report and a remediation CSV.</p></article>
+      </div>
+      <p class="note">This is a policy-based signal, not a complete allocation verdict. Azure cost detail tags may not include resource group tags; inventory and approved scope mappings can add allocation evidence. Shared-cost rules and unsupported charges still require review.</p>
+    </section>
+    <footer><span>FINOPS TOOLKIT</span><span>AZURE · LOCAL ANALYSIS</span></footer>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
+
+

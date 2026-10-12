@@ -1,0 +1,6 @@
+Date,SubscriptionId,SubscriptionName,ResourceId,ResourceGroup,ServiceName,CostInBillingCurrency,BillingCurrency,Tags
+2026-09-01,111,Production,/subscriptions/111/resourceGroups/rg-app/providers/Microsoft.Compute/virtualMachines/vm-api,rg-app,Virtual Machines,428.70,EUR,"{""CostCenter"":""CC-210"",""Environment"":""Production""}"
+2026-09-01,111,Production,/subscriptions/111/resourceGroups/rg-data/providers/Microsoft.Storage/storageAccounts/stdata,rg-data,Storage,92.15,EUR,"{""Environment"":""Production""}"
+2026-09-01,222,Shared,/subscriptions/222/resourceGroups/rg-net/providers/Microsoft.Network/virtualNetworks/vnet-hub,rg-net,Virtual Network,185.40,EUR,"{""CostCenter"":""CC-100""}"
+2026-09-01,222,Shared,, ,Bandwidth,64.25,EUR,
+2026-09-01,333,Development,/subscriptions/333/resourceGroups/rg-test/providers/Microsoft.Compute/virtualMachines/vm-test,rg-test,Virtual Machines,-12.50,EUR,"{""CostCenter"":""CC-310""}"

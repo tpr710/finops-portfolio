@@ -1,0 +1,2 @@
+id,subscriptionId,resourceGroup,name,type,tags
+/subscriptions/111/resourceGroups/rg-data/providers/Microsoft.Storage/storageAccounts/stdata,111,rg-data,stdata,Microsoft.Storage/storageAccounts,"{""Application"":""Payments"",""Environment"":""Production""}"

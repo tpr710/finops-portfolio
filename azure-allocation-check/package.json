@@ -1,0 +1,10 @@
+{
+  "name": "azure-allocation-check",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-portable.mjs",
+    "test": "node --test",
+    "check": "node --check src/azureCsv.js && node --check src/analyze.js && node --check src/report.js && node --check src/policy.js && node --check src/main.js"
+  }
+}

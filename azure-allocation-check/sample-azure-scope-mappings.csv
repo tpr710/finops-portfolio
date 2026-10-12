@@ -1,0 +1,3 @@
+ScopeType,ScopeId,ParentScopeId,Tags
+resourceGroup,rg-data,subscriptions/111,"{""CostCenter"":""CC-420"",""Environment"":""Production""}"
+subscription,222,,"{""CostCenter"":""CC-100"",""Environment"":""Shared""}"

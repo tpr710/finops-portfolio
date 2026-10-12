@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Azure Allocation Check</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="mark" aria-hidden="true">F</div>
+      <div><p class="eyebrow">FINOPS TOOLKIT · AZURE PILOT</p><h1>Allocation Check</h1></div>
+      <span class="mode">READ ONLY · FILES STAY IN YOUR BROWSER</span>
+    </header>
+
+    <section class="intro">
+      <div><p class="eyebrow">CLOUD COST VISIBILITY</p><h2>Find spend that needs an owner.</h2><p>Load Azure cost data, set a tag policy, and optionally add resource inventory and approved hierarchy mappings. Analysis stays in your browser.</p></div>
+      <a href="#how-it-works">How it works <span aria-hidden="true">↓</span></a>
+    </section>
+
+    <section class="workspace" aria-label="Analyze Azure export">
+      <div class="setup">
+        <div class="step-title"><span>01</span><div><h3>Choose your data</h3><p>Azure Cost Management export · CSV</p></div></div>
+        <label class="dropzone" id="dropzone" for="file-input">
+          <span class="upload-icon" aria-hidden="true">↑</span>
+          <strong>Drop a CSV export here</strong>
+          <span class="browse-row">or <span class="browse-button">browse files</span></span>
+          <input id="file-input" type="file" accept=".csv,text/csv" aria-label="Choose Azure cost export CSV">
+          <small id="file-name">Your file is analyzed locally and is not uploaded.</small>
+          <small id="file-summary" class="file-summary" aria-live="polite"></small>
+        </label>
+        <div class="optional-files">
+          <label class="optional-file" for="inventory-file"><span>Optional resource inventory CSV</span><small>ResourceId, SubscriptionId, ResourceGroup, Tags</small><input id="inventory-file" type="file" accept=".csv,text/csv"><small id="inventory-name">Not selected</small></label>
+          <label class="optional-file" for="scope-file"><span>Optional approved hierarchy mappings CSV</span><small>ScopeType, ScopeId, ParentScopeId, Tags</small><input id="scope-file" type="file" accept=".csv,text/csv"><small id="scope-name">Not selected</small></label>
+        </div>
+        <div class="field-row">
+          <label for="tag-key">Allocation tag key</label>
+          <input id="tag-key" type="text" value="CostCenter" placeholder="e.g. CostCenter">
+          <p>Used to measure spend that has an approved owner.</p>
+        </div>
+        <div class="field-row">
+          <label for="required-tags">Other required tags</label>
+          <textarea id="required-tags" rows="2" placeholder="Environment&#10;Application"></textarea>
+          <p>One tag key per line. Leave blank if none are required.</p>
+        </div>
+        <div class="field-row">
+          <label for="allowed-values">Allowed values (optional)</label>
+          <textarea id="allowed-values" rows="3" placeholder="CostCenter=CC-100|CC-200&#10;Environment=Production|Development"></textarea>
+          <p>One rule per line: TagKey=value1|value2. Keys without a rule accept any non-empty value.</p>
+        </div>
+        <button id="analyze" class="primary" disabled>Analyze export <span aria-hidden="true">→</span></button>
+        <p id="status" class="status" role="status" aria-live="polite">Select an Azure CSV export to begin.</p>
+      </div>
+
+      <div class="results" id="results">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-art" aria-hidden="true"><span></span><span></span><span></span><i>✓</i></div>
+          <h3>Your allocation picture will appear here</h3>
+          <p>We’ll summarize spend with and without the selected tag, then list the records that need review.</p>
+          <button id="sample-button" class="text-button">Explore with sample data <span aria-hidden="true">↗</span></button>
+        </div>
+        <div id="report" hidden></div>
+      </div>
+    </section>
+
+    <section class="how" id="how-it-works">
+      <p class="eyebrow">THE FIRST BUILD SLICE</p><h2>Useful now. Ready to grow.</h2>
+      <div class="how-grid">
+        <article><span>01</span><h3>Bring client rules</h3><p>Set required tags and approved values for the client’s allocation policy.</p></article>
+        <article><span>02</span><h3>Add allocation evidence</h3><p>Join cost rows to resource inventory and approved parent-scope mappings.</p></article>
+        <article><span>03</span><h3>Deliver an action plan</h3><p>Download a client-ready report and a remediation CSV.</p></article>
+      </div>
+      <p class="note">This is a policy-based signal, not a complete allocation verdict. Azure cost detail tags may not include resource group tags; inventory and approved scope mappings can add allocation evidence. Shared-cost rules and unsupported charges still require review.</p>
+    </section>
+    <footer><span>FINOPS TOOLKIT</span><span>AZURE · LOCAL ANALYSIS</span></footer>
+  </main>
+  <script>
+(() => {
+
+// ---- azureCsv.js ----
+function parseCsv(text) {
+  if (typeof text !== "string") throw new Error("The selected file could not be read as text.");
+  if (text.length > 50_000_000) throw new Error("This CSV is larger than the 50 MB local analysis limit.");
+  const delimiter = detectDelimiter(text);
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (quoted) {
+      if (char === '"' && text[i + 1] === '"') { cell += '"'; i += 1; }
+      else if (char === '"') quoted = false;
+      else cell += char;
+    } else if (char === '"') {
+      if (cell.length) throw new Error(`Unexpected quote in CSV row ${rows.length + 1}.`);
+      quoted = true;
+    }
+    else if (char === delimiter) { row.push(cell); cell = ""; }
+    else if (char === "\n") { row.push(cell.replace(/\r$/, "")); rows.push(row); row = []; cell = ""; }
+    else cell += char;
+  }
+  if (quoted) throw new Error("The CSV has an unclosed quoted field.");
+  if (cell.length || row.length) { row.push(cell.replace(/\r$/, "")); rows.push(row); }
+  const nonempty = rows.filter(r => r.some(v => v.trim() !== ""));
+  if (nonempty.length < 2) throw new Error("The CSV needs a header row and at least one data row.");
+  const headers = nonempty[0].map(h => h.trim().replace(/^\uFEFF/, ""));
+  if (headers.length > 500) throw new Error("The CSV has more than 500 columns; reduce the export fields and try again.");
+  if (headers.some(header => !header)) throw new Error("The CSV contains an empty column name.");
+  if (new Set(headers.map(header => header.toLowerCase())).size !== headers.length) throw new Error("The CSV contains duplicate column names that differ only by capitalization.");
+  if (nonempty.length > 500_001) throw new Error("This CSV has more than 500,000 rows; split the export and analyze each period separately.");
+  if (headers.some(header => header.length > 500)) throw new Error("A CSV column name exceeds the 500-character limit.");
+  return nonempty.slice(1).map((values, index) => {
+    if (values.length > headers.length) throw new Error(`CSV row ${index + 2} has more fields than the header.`);
+    if (values.some(value => value.length > 100_000)) throw new Error(`CSV row ${index + 2} contains a field over the 100,000-character limit.`);
+    return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? ""]));
+  });
+}
+
+function detectDelimiter(text) {
+  const firstLine = String(text).split(/\r?\n/, 1)[0] ?? "";
+  const counts = { ",": 0, ";": 0, "\t": 0 };
+  let quoted = false;
+  for (let i = 0; i < firstLine.length; i += 1) {
+    const char = firstLine[i];
+    if (char === '"' && firstLine[i + 1] === '"' && quoted) i += 1;
+    else if (char === '"') quoted = !quoted;
+    else if (!quoted && Object.hasOwn(counts, char)) counts[char] += 1;
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || ",";
+}
+
+const aliases = {
+  cost: ["CostInBillingCurrency", "Cost", "PreTaxCost", "EffectiveCost", "BilledCost", "CostInUSD"],
+  currency: ["BillingCurrency", "BillingCurrencyCode", "Currency"],
+  resourceId: ["ResourceId", "ResourceID", "InstanceId", "ResourceUri", "id"],
+  date: ["Date", "UsageDate", "ChargePeriodStart"],
+  subscriptionId: ["SubscriptionId", "subscriptionId"],
+  subscriptionName: ["SubscriptionName", "subscriptionName"],
+  resourceGroup: ["ResourceGroup", "ResourceGroupName", "resourceGroup"],
+  resourceName: ["ResourceName", "Name", "name"],
+  service: ["ServiceName", "ConsumedService", "Service"]
+};
+
+function findKey(record, candidates) {
+  const keys = Object.keys(record);
+  for (const candidate of candidates) {
+    const found = keys.find(key => key.toLowerCase() === candidate.toLowerCase());
+    if (found) return found;
+  }
+  return null;
+}
+
+function parseTags(record) {
+  const tags = {};
+  for (const [key, value] of Object.entries(record)) {
+    const match = key.match(/^(?:tags?\s*[:.]\s*|tag\s*\[)(.+?)(?:\])?$/i);
+    if (match && String(value).trim()) tags[match[1].trim()] = String(value).trim();
+  }
+  const tagsKey = findKey(record, ["Tags", "Tag"]);
+  if (tagsKey && String(record[tagsKey]).trim()) {
+    try {
+      const parsed = JSON.parse(record[tagsKey]);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) Object.assign(tags, parsed);
+    } catch { /* Keep any flattened tag fields when the source isn't JSON. */ }
+  }
+  return tags;
+}
+
+function baseColumns(record) {
+  return Object.fromEntries(Object.entries(aliases).map(([name, options]) => [name, findKey(record, options)]));
+}
+
+function fieldValue(record, key) { return key ? String(record[key] ?? "").trim() : ""; }
+
+function detectColumns(records) { return baseColumns(records[0] ?? {}); }
+
+function detectCostProfile(records) {
+  const columns = detectColumns(records);
+  if (!columns.cost) throw new Error("Could not find a supported cost column. Expected CostInBillingCurrency, PreTaxCost, Cost, EffectiveCost, or BilledCost.");
+  const name = columns.cost.toLowerCase();
+  const profile = name === "costinbillingcurrency" ? "Azure Cost Details · billing currency" :
+    name === "pretaxcost" ? "Azure usage details · pre-tax cost" :
+    name === "effectivecost" ? "Azure amortized/effective cost · confirm export type" :
+    name === "billedcost" ? "Azure billed cost · confirm export type" :
+    name === "costinusd" ? "Azure cost in USD · converted currency" : "Generic cost column · semantics require confirmation";
+  const warnings = [];
+  if (name === "effectivecost" || name === "billedcost" || name === "cost") warnings.push("Confirm whether this is actual, amortized, or billed cost before comparing totals.");
+  if (name === "costinusd") warnings.push("Values are in USD; do not compare to billing-currency totals without conversion context.");
+  return { costColumn: columns.cost, profile, warnings };
+}
+
+function normalizeAzureRows(records, columns = detectColumns(records)) {
+  const costKey = columns.cost;
+  if (!costKey) throw new Error("Could not find a cost column. Expected CostInBillingCurrency, PreTaxCost, Cost, or EffectiveCost.");
+  return records.map((raw, index) => {
+    const cost = parseCostNumber(fieldValue(raw, costKey));
+    return {
+      source: "azure-cost-export",
+      sourceRow: index + 2,
+      costColumn: columns.cost,
+      cost: Number.isFinite(cost) ? cost : null,
+      currency: fieldValue(raw, columns.currency) || (/^costinusd$/i.test(columns.cost) ? "USD" : ""),
+      resourceId: fieldValue(raw, columns.resourceId),
+      date: fieldValue(raw, columns.date),
+      subscriptionId: fieldValue(raw, columns.subscriptionId),
+      subscription: fieldValue(raw, columns.subscriptionName) || fieldValue(raw, columns.subscriptionId),
+      resourceGroup: fieldValue(raw, columns.resourceGroup),
+      resourceName: fieldValue(raw, columns.resourceName),
+      service: fieldValue(raw, columns.service),
+      tags: parseTags(raw),
+      raw
+    };
+  });
+}
+
+function parseCostNumber(value) {
+  const raw = String(value ?? "").trim().replace(/\s/g, "");
+  if (!raw) return null;
+  if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw)) return Number(raw.replace(/,/g, ""));
+  if (/^-?(?:\d{1,3}(\.\d{3})+|\d+),\d+$/.test(raw)) return Number(raw.replace(/\./g, "").replace(",", "."));
+  if (/^-?\d+,\d+$/.test(raw)) return Number(raw.replace(",", "."));
+  return Number.isFinite(Number(raw)) ? Number(raw) : null;
+}
+
+function normalizeAzureInventory(records) {
+  if (!records.length) return [];
+  const columns = baseColumns(records[0]);
+  if (!columns.resourceId) throw new Error("The inventory CSV needs an Azure resource ID column, usually ResourceId or id.");
+  return records.map(raw => ({
+    resourceId: fieldValue(raw, columns.resourceId),
+    subscriptionId: fieldValue(raw, columns.subscriptionId),
+    subscription: fieldValue(raw, columns.subscriptionName) || fieldValue(raw, columns.subscriptionId),
+    resourceGroup: fieldValue(raw, columns.resourceGroup),
+    resourceName: fieldValue(raw, columns.resourceName),
+    tags: parseTags(raw)
+  })).filter(resource => resource.resourceId);
+}
+
+function normalizeAzureScopes(records) {
+  if (!records.length) return [];
+  const first = records[0];
+  const scopeIdKey = findKey(first, ["ScopeId", "ScopeID", "id", "Id"]);
+  if (!scopeIdKey) throw new Error("The hierarchy CSV needs a ScopeId column.");
+  const typeKey = findKey(first, ["ScopeType", "Type"]);
+  const parentKey = findKey(first, ["ParentScopeId", "ParentId"]);
+  const tagKey = findKey(first, ["TagKey", "AllocationTag"]);
+  const valueKey = findKey(first, ["TagValue", "AllocationValue"]);
+  return records.map(raw => {
+    const scopeId = fieldValue(raw, scopeIdKey);
+    const scopeType = fieldValue(raw, typeKey) || inferScopeType(scopeId);
+    const tags = parseTags(raw);
+    if (tagKey && valueKey && fieldValue(raw, tagKey)) tags[fieldValue(raw, tagKey)] = fieldValue(raw, valueKey);
+    return { scopeId, scopeType, parentScopeId: fieldValue(raw, parentKey), tags };
+  }).filter(scope => scope.scopeId);
+}
+
+function inferScopeType(id) {
+  const normalized = id.toLowerCase();
+  if (normalized.includes("/resourcegroups/")) return "resourceGroup";
+  if (normalized.includes("/subscriptions/")) return "subscription";
+  if (normalized.includes("/managementgroups/")) return "managementGroup";
+  return "scope";
+}
+
+
+// ---- analyze.js ----
+function analyzeAllocation(rows, tagKey, policy = {}, data = {}) {
+  const valid = rows.filter(row => row.cost !== null);
+  if (!valid.length) throw new Error("No valid numeric costs were found in the selected column.");
+
+  const currencies = [...new Set(valid.map(row => row.currency).filter(Boolean))];
+  if (currencies.length > 1) throw new Error("This export contains multiple currencies. Filter it to one billing currency before analyzing so totals are not combined incorrectly.");
+  const currencyMissing = valid.some(row => !row.currency);
+  const costColumns = [...new Set(valid.map(row => row.costColumn).filter(Boolean))];
+  if (costColumns.length > 1) throw new Error("This export combines multiple cost measures. Analyze one cost column at a time.");
+
+  const inventory = buildInventoryIndex(data.inventory ?? []);
+  const scopes = buildScopeIndex(data.scopes ?? []);
+  if (inventory.duplicates.length) throw new Error(`Resource inventory contains ${inventory.duplicates.length} duplicate resource IDs. Resolve duplicates before analysis.`);
+  if (scopes.duplicates.length) throw new Error(`Hierarchy mappings contain ${scopes.duplicates.length} duplicate scope IDs. Resolve duplicates before analysis.`);
+  if (scopes.cycles.length) throw new Error(`Hierarchy mappings contain a parent cycle involving ${scopes.cycles.length} scope(s). Resolve cycles before analysis.`);
+  const keys = new Set(valid.flatMap(row => Object.keys(row.tags)));
+  const actualTagKey = [...keys].find(key => key.toLowerCase() === tagKey.trim().toLowerCase()) ?? tagKey.trim();
+  const requiredKeys = [...new Set([actualTagKey, ...(policy.requiredTags ?? [])].map(key => String(key).trim()).filter(Boolean))];
+  const allowedValues = normalizeAllowedValues(policy.allowedValues ?? {});
+  const totals = { total: 0, allocated: 0, direct: 0, inherited: 0, invalid: 0, unallocated: 0, ambiguous: 0, unresolved: 0 };
+  const policyCompliant = { spend: 0, records: 0 };
+
+  const findings = valid.map(row => {
+    const inventoryRow = inventory.index.get(normalizeId(row.resourceId));
+    const resourceGroup = row.resourceGroup || inventoryRow?.resourceGroup || resourceGroupFromId(row.resourceId);
+    const subscriptionId = row.subscriptionId || inventoryRow?.subscriptionId || subscriptionFromId(row.resourceId);
+    const ancestry = resolveScopes(scopes, { resourceGroup, subscriptionId, resourceId: row.resourceId, inventoryRow });
+    const candidates = [
+      { tags: row.tags, source: "Cost export metadata" },
+      { tags: inventoryRow?.tags ?? {}, source: "Resource inventory" },
+      ...ancestry.map(scope => ({ tags: scope.tags, source: scope.scopeTypeLabel }))
+    ];
+    const allocationCandidates = candidates.map(candidate => ({ source: candidate.source, value: getTagValue(candidate.tags, actualTagKey) })).filter(candidate => candidate.value);
+    const conflictingAllocationValues = [...new Set(allocationCandidates.map(candidate => candidate.value.toLowerCase()))].length > 1;
+    const { tags: effectiveTags, sources: tagSources } = mergeTags(candidates);
+    const allocationValue = getTagValue(effectiveTags, actualTagKey);
+    const allocationSource = getTagSource(tagSources, actualTagKey);
+    const allocationValues = allowedValuesFor(allowedValues, actualTagKey);
+    const allocationIsInvalid = Boolean(allocationValue && allocationValues && !includesIgnoreCase(allocationValues, allocationValue));
+    const policyIssues = [];
+
+    for (const key of requiredKeys) {
+      const value = getTagValue(effectiveTags, key);
+      if (!value) policyIssues.push(`Missing required tag: ${key}`);
+      else {
+        const accepted = allowedValuesFor(allowedValues, key);
+        if (accepted && !includesIgnoreCase(accepted, value)) policyIssues.push(`Invalid ${key} value: ${value}`);
+      }
+    }
+    if (!policyIssues.length) { policyCompliant.spend += row.cost; policyCompliant.records += 1; }
+
+    totals.total += row.cost;
+    let allocationStatus;
+    if (allocationIsInvalid) {
+      totals.invalid += row.cost;
+      allocationStatus = "Invalid allocation tag";
+    } else if (conflictingAllocationValues) {
+      totals.ambiguous += row.cost;
+      allocationStatus = "Ambiguous: conflicting allocation values";
+    } else if (allocationValue) {
+      totals.allocated += row.cost;
+      if (allocationSource === "Cost export metadata") totals.direct += row.cost;
+      else totals.inherited += row.cost;
+      allocationStatus = "Allocated";
+    } else if (!row.resourceId) {
+      totals.unresolved += row.cost;
+      allocationStatus = "Unresolved: no resource ID";
+    } else {
+      totals.unallocated += row.cost;
+      allocationStatus = "Unallocated";
+    }
+
+    return {
+      ...row,
+      resourceGroup,
+      subscriptionId,
+      allocationValue,
+      allocationSource,
+      allocationEvidence: allocationCandidates,
+      conflictingAllocationValues,
+      allocationStatus,
+      policyIssues,
+      recommendedAction: remediationFor(policyIssues, allocationStatus, actualTagKey, allocationValues),
+      inventoryMatched: Boolean(inventoryRow),
+      inventoryTags: inventoryRow?.tags ?? {},
+      effectiveTags,
+      effectiveTagSources: tagSources,
+      findingId: `AZ-${String(row.sourceRow).padStart(6, "0")}`
+    };
+  }).map(row => ({
+    ...row,
+    spendImpact: Math.abs(row.cost),
+    priority: !row.policyIssues.length && row.allocationStatus === "Allocated" ? "No action" : "Review",
+    ownerRole: "Client to assign",
+    confidence: row.conflictingAllocationValues ? "Low · conflicting evidence" : row.allocationStatus.startsWith("Unresolved") ? "Low · insufficient source data" : row.allocationStatus === "Unallocated" ? "Medium · no approved value found" : "High · matched explicit metadata"
+  }));
+
+  const coverage = totals.total > 0 ? totals.allocated / totals.total : null;
+  const period = valid.map(row => row.date).filter(Boolean).sort();
+  const subscriptions = [...new Set(valid.map(row => row.subscription).filter(Boolean))].sort();
+  const generatedAt = new Date().toISOString();
+  const assessmentId = stableHash(`${generatedAt}:${rows.length}:${data.filename ?? "local"}`);
+  return {
+    tagKey: actualTagKey,
+    requiredKeys,
+    allowedValues,
+    totals,
+    coverage,
+    policyComplianceCoverage: totals.total > 0 ? policyCompliant.spend / totals.total : null,
+    policyCompliant,
+    currency: currencies[0] || "Currency not provided",
+    periodStart: period[0] ?? "Not provided",
+    periodEnd: period.at(-1) ?? "Not provided",
+    subscriptions,
+    rows: findings,
+    recordCount: valid.length,
+    skippedCount: rows.length - valid.length,
+    inventoryCount: inventory.index.size,
+    inventoryMatchCount: findings.filter(row => row.inventoryMatched).length,
+    scopeCount: data.scopes?.length ?? 0,
+    hierarchyWarnings: scopes.missingParents.map(parent => `Missing parent scope mapping: ${parent}`),
+    currencyMissing,
+    costColumn: costColumns[0] ?? "Not provided",
+    policyHash: stableHash(JSON.stringify({ tagKey: actualTagKey, requiredKeys, allowedValues })),
+    assessmentId,
+    generatedAt,
+    profile: data.profile ?? null,
+    sourceFile: data.filename ? String(data.filename).replace(/[\\/:*?"<>|]/g, "_").slice(0, 120) : "Sample data",
+    tagObserved: keys.size > 0 || findings.some(row => Object.keys(row.effectiveTags).length > 0),
+    policyIssueCount: findings.filter(row => row.policyIssues.length > 0).length
+  };
+}
+
+function stableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function buildInventoryIndex(records) {
+  const index = new Map();
+  const duplicates = new Set();
+  for (const record of records) if (record.resourceId) {
+    const id = normalizeId(record.resourceId);
+    if (index.has(id)) duplicates.add(id);
+    index.set(id, record);
+  }
+  return { index, duplicates: [...duplicates] };
+}
+
+function buildScopeIndex(records) {
+  const byTypeAndId = new Map();
+  const byId = new Map();
+  const duplicates = new Set();
+  for (const scope of records) {
+    const normalized = { ...scope, scopeTypeLabel: labelForScope(scope.scopeType), aliases: scopeAliases(scope) };
+    for (const alias of normalized.aliases) {
+      if (byId.has(normalizeId(alias)) && byId.get(normalizeId(alias)).scopeId !== scope.scopeId) duplicates.add(normalizeId(alias));
+      byId.set(normalizeId(alias), normalized);
+      byTypeAndId.set(`${normalizeScopeType(scope.scopeType)}:${normalizeId(alias)}`, normalized);
+    }
+  }
+  const cycles = [];
+  const missingParents = [];
+  for (const scope of records) {
+    if (scope.parentScopeId && !findScopeById({ byId }, scope.parentScopeId)) missingParents.push(scope.parentScopeId);
+    const visited = new Set();
+    let current = scope;
+    while (current?.parentScopeId) {
+      const id = normalizeId(current.scopeId);
+      if (visited.has(id)) { cycles.push(id); break; }
+      visited.add(id);
+      current = byId.get(normalizeId(current.parentScopeId)) ?? null;
+    }
+  }
+  return { byTypeAndId, byId, duplicates: [...duplicates], cycles: [...new Set(cycles)], missingParents: [...new Set(missingParents)] };
+}
+
+function resolveScopes(index, { resourceGroup, subscriptionId, resourceId, inventoryRow }) {
+  const groupId = resourceGroupScopeFromId(resourceId) || resourceGroupScopeFromId(inventoryRow?.resourceId);
+  const group = findScope(index, "resourceGroup", [groupId, resourceGroup]);
+  const subscription = findScope(index, "subscription", [subscriptionId, `/subscriptions/${subscriptionId}`]);
+  const ordered = [];
+  const seen = new Set();
+  const addWithParents = scope => {
+    let current = scope;
+    while (current && !seen.has(normalizeId(current.scopeId))) {
+      seen.add(normalizeId(current.scopeId));
+      ordered.push(current);
+      current = current.parentScopeId ? findScopeById(index, current.parentScopeId) : null;
+    }
+  };
+  addWithParents(group);
+  addWithParents(subscription);
+  return ordered;
+}
+
+function findScopeById(index, id) {
+  const exact = index.byId.get(normalizeId(id));
+  if (exact) return exact;
+  const reference = String(id).match(/(?:subscriptions|resourceGroups|managementGroups)\/([^/]+)/i)?.[1];
+  return reference ? index.byId.get(normalizeId(reference)) : null;
+}
+
+function findScope(index, type, aliases) {
+  for (const alias of aliases.filter(Boolean)) {
+    const found = index.byTypeAndId.get(`${normalizeScopeType(type)}:${normalizeId(alias)}`);
+    if (found) return found;
+  }
+  return null;
+}
+
+function scopeAliases(scope) {
+  const aliases = [scope.scopeId];
+  const normalizedType = normalizeScopeType(scope.scopeType);
+  const id = scope.scopeId;
+  if (normalizedType === "resourcegroup") {
+    const match = id.match(/resourceGroups\/([^/]+)/i);
+    if (match) aliases.push(match[1]);
+  }
+  if (normalizedType === "subscription") {
+    const match = id.match(/subscriptions\/([^/]+)/i);
+    if (match) aliases.push(match[1]);
+  }
+  return aliases;
+}
+
+function normalizeScopeType(type = "") { return String(type).toLowerCase().replace(/[\s_-]/g, ""); }
+function labelForScope(type = "scope") {
+  const normalized = normalizeScopeType(type);
+  if (normalized === "resourcegroup") return "Resource group mapping";
+  if (normalized === "subscription") return "Subscription mapping";
+  if (normalized === "managementgroup") return "Management group mapping";
+  return "Approved hierarchy mapping";
+}
+function normalizeId(value = "") { return String(value).trim().replace(/\/$/, "").toLowerCase(); }
+function resourceGroupScopeFromId(value = "") { return String(value).match(/^(.*\/resourceGroups\/[^/]+)/i)?.[1] ?? ""; }
+function resourceGroupFromId(value = "") { return String(value).match(/\/resourceGroups\/([^/]+)/i)?.[1] ?? ""; }
+function subscriptionFromId(value = "") { return String(value).match(/\/subscriptions\/([^/]+)/i)?.[1] ?? ""; }
+
+function mergeTags(candidates) {
+  const tags = {};
+  const sources = {};
+  for (const candidate of candidates) {
+    for (const [key, rawValue] of Object.entries(candidate.tags ?? {})) {
+      const value = String(rawValue ?? "").trim();
+      if (!value || Object.keys(tags).some(existing => existing.toLowerCase() === key.toLowerCase())) continue;
+      tags[key] = value;
+      sources[key.toLowerCase()] = candidate.source;
+    }
+  }
+  return { tags, sources };
+}
+
+function getTagValue(tags, key) {
+  const found = Object.entries(tags).find(([tagKey]) => tagKey.toLowerCase() === key.toLowerCase());
+  return String(found?.[1] ?? "").trim();
+}
+function getTagSource(sources, key) { return sources[key.toLowerCase()] ?? ""; }
+
+function normalizeAllowedValues(value) {
+  if (Array.isArray(value)) {
+    return Object.fromEntries(value.filter(rule => rule?.key).map(rule => [String(rule.key).trim(), (rule.values ?? []).map(String)]));
+  }
+  return Object.fromEntries(Object.entries(value).map(([key, values]) => [
+    String(key).trim(), (Array.isArray(values) ? values : [values]).map(item => String(item).trim()).filter(Boolean)
+  ]));
+}
+function allowedValuesFor(rules, tagKey) {
+  const found = Object.entries(rules).find(([key]) => key.toLowerCase() === tagKey.toLowerCase());
+  return found?.[1]?.length ? found[1] : null;
+}
+function includesIgnoreCase(values, candidate) { return values.some(value => value.toLowerCase() === candidate.toLowerCase()); }
+
+function remediationFor(issues, status, tagKey, acceptedValues) {
+  if (issues.length) {
+    return issues.map(issue => issue.startsWith("Invalid ")
+      ? `Replace the invalid value with an approved ${tagKey} value${acceptedValues ? ` (${acceptedValues.join(", ")})` : ""}.`
+      : `Add the missing required tag at the resource or an approved parent scope.`).join(" ");
+  }
+  if (status === "Unresolved: no resource ID") return "Reconcile this charge to a resource or provide an approved subscription-level allocation mapping.";
+  if (status === "Unallocated") return `Confirm the owner and add an approved ${tagKey} tag or scope mapping.`;
+  if (status === "Invalid allocation tag") return `Replace the value with an approved ${tagKey} value.`;
+  return "";
+}
+
+
+// ---- report.js ----
+function renderReport(result, target) {
+  const money = value => `${result.currency} ${new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
+  const pct = value => value === null ? "N/A" : `${(value * 100).toFixed(1)}%`;
+  const escape = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+  const affected = result.rows.filter(row => row.allocationStatus !== "Allocated" || row.policyIssues.length > 0 || (row.allocationSource && row.allocationSource !== "Cost export metadata"))
+    .sort((left, right) => Math.abs(right.cost) - Math.abs(left.cost));
+  const statusNote = result.tagObserved ? `Checking allocation tag <strong>${escape(result.tagKey)}</strong> and ${result.requiredKeys.length - 1} other required tag(s) across ${result.recordCount.toLocaleString()} cost records.` : `No tag columns were detected. The export may omit tag data, or this allocation key may not be present.`;
+  const needsReview = Math.abs(result.totals.invalid) + Math.abs(result.totals.unallocated) + Math.abs(result.totals.ambiguous) + Math.abs(result.totals.unresolved);
+  const valueRules = Object.entries(result.allowedValues).map(([key, values]) => `${escape(key)}: ${values.map(escape).join(", ")}`).join(" · ") || "Any non-empty value";
+  const periodLabel = result.periodStart === result.periodEnd ? result.periodStart : `${result.periodStart} – ${result.periodEnd}`;
+  target.innerHTML = `
+    <div class="report-head"><div><h3>Allocation snapshot</h3><p>${statusNote}</p></div><div class="report-actions"><button class="secondary" id="download-report">Download report ↓</button><button class="secondary" id="download-findings">Download findings ↓</button></div></div>
+    <div class="policy-summary"><strong>Assessment scope</strong><span>Period: ${escape(periodLabel)} · Subscriptions: ${result.subscriptions.length ? result.subscriptions.map(escape).join(", ") : "Not provided"}</span><span>Cost profile: ${escape(result.profile?.profile || "Not identified")} · Column: ${escape(result.costColumn)}</span><span>Assessment ID: ${escape(result.assessmentId)} · Policy fingerprint: ${escape(result.policyHash)} · Generated: ${escape(result.generatedAt)}</span><strong>Policy checked</strong><span>Required: ${result.requiredKeys.map(escape).join(", ")}</span><span>Allowed values: ${valueRules}</span><span>Inventory matches: ${result.inventoryMatchCount.toLocaleString()} of ${result.recordCount.toLocaleString()} · Approved mappings: ${result.scopeCount.toLocaleString()}</span></div>
+    <div class="metrics">
+      <div class="metric"><span>IN-SCOPE SPEND</span><strong>${money(result.totals.total)}</strong><small>${result.recordCount.toLocaleString()} valid records</small></div>
+      <div class="metric"><span>ALLOCATION COVERAGE</span><strong>${pct(result.coverage)}</strong><small>Spend with an accepted ${escape(result.tagKey)} value</small></div>
+      <div class="metric"><span>POLICY-COMPLIANT SPEND</span><strong>${pct(result.policyComplianceCoverage)}</strong><small>Spend with all required tags valid</small></div>
+      <div class="metric"><span>ALLOCATION NEEDS REVIEW</span><strong>${money(needsReview)}</strong><small>${result.policyIssueCount} records have policy issues</small></div>
+    </div>
+    <div class="section-heading"><h4>Allocation breakdown</h4><span>${escape(result.currency)} · ${escape(periodLabel)}</span></div>
+    <div class="allocation-breakdown"><div><span>Directly allocated</span><strong>${money(result.totals.direct)}</strong></div><div><span>Inherited / mapped</span><strong>${money(result.totals.inherited)}</strong></div><div><span>Unallocated</span><strong>${money(result.totals.unallocated)}</strong></div><div><span>Ambiguous</span><strong>${money(result.totals.ambiguous)}</strong></div><div><span>Invalid</span><strong>${money(result.totals.invalid)}</strong></div><div><span>Unresolved</span><strong>${money(result.totals.unresolved)}</strong></div></div>
+    <div class="bar-label"><span>Allocation coverage = accepted allocation spend ÷ in-scope spend (${money(result.totals.allocated)} ÷ ${money(result.totals.total)})</span><strong>${pct(result.coverage)}</strong></div>
+    <p class="formula-note">Policy-compliant spend = records meeting all required tags ÷ in-scope spend (${money(result.policyCompliant.spend)} ÷ ${money(result.totals.total)}). ${result.coverage === null ? "Coverage is N/A because net in-scope spend is zero or negative; signed credits are included." : "Negative costs remain signed; needs-review uses absolute exposure so credits do not cancel review amounts."}</p>
+    <div class="bar"><span style="width:${Math.min(100, Math.max(0, (result.coverage ?? 0) * 100))}%"></span></div>
+    <div class="section-heading"><h4>Records to review</h4><span>${affected.length.toLocaleString()} records</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Finding ID</th><th>Resource</th><th>Subscription</th><th>Service</th><th>Cost</th><th>Evidence / Finding</th><th>Next action</th></tr></thead><tbody>
+    ${affected.slice(0, 250).map(row => { const finding = row.policyIssues.join("; ") || (row.conflictingAllocationValues ? `Conflicting approved values: ${row.allocationEvidence.map(item => `${item.source}: ${item.value}`).join(" · ")}` : row.allocationSource && row.allocationSource !== "Cost export metadata" ? `Allocated via ${row.allocationSource} (${result.tagKey}=${row.allocationValue})` : row.allocationStatus); return `<tr><td>${escape(row.findingId)}</td><td title="${escape(row.resourceId)}">${escape(row.resourceId || "Not provided")}</td><td>${escape(row.subscription || "—")}</td><td>${escape(row.service || "—")}</td><td>${money(row.cost)}</td><td><span class="${row.policyIssues.length || row.allocationStatus !== "Allocated" ? "tag-bad" : "tag-good"}">${escape(finding)}</span></td><td>${escape(row.recommendedAction || "Review evidence and confirm client owner")}</td></tr>`; }).join("") || `<tr><td colspan="7">No records need review for this tag policy.</td></tr>`}
+    </tbody></table></div>
+    <p class="footnote">This is a tag-based signal, not a complete allocation verdict. Hierarchy, inherited tags, shared-cost rules, unsupported resources, credits, and export type can change interpretation. ${result.hierarchyWarnings?.length ? `Hierarchy warning: ${result.hierarchyWarnings.map(escape).join("; ")} ` : ""}${result.skippedCount ? `${result.skippedCount} rows with invalid costs were excluded.` : ""}${affected.length > 250 ? ` Showing 250 of ${affected.length} review rows; CSV download contains all ${affected.length} findings.` : ""}</p>`;
+  document.getElementById("download-findings").addEventListener("click", () => downloadCsv(affected, result));
+  document.getElementById("download-report").addEventListener("click", () => downloadClientReport(target, result));
+}
+
+function escapeCsvCell(value) {
+  let safe = String(value ?? "");
+  const formulaLike = /^[\t\r\n]/.test(safe) || /^[\s\u0000-\u001f]*[=+@-]/.test(safe);
+  if (formulaLike) safe = `'${safe}`;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(rows, result) {
+  const fields = ["findingId", "sourceRow", "resourceId", "resourceGroup", "subscriptionId", "subscription", "service", "date", "cost", "currency", "allocationValue", "allocationSource", "allocationStatus", "allocationEvidence", "policyIssues", "recommendedAction", "requiredTagKeys", "allowedValues"];
+  const quote = escapeCsvCell;
+  const csv = [fields.join(","), ...rows.map(row => fields.map(field => {
+    if (field === "requiredTagKeys") return quote(result.requiredKeys.join("; "));
+    if (field === "allowedValues") return quote(JSON.stringify(result.allowedValues));
+    if (field === "allocationEvidence") return quote(JSON.stringify(row.allocationEvidence));
+    return quote(Array.isArray(row[field]) ? row[field].join("; ") : row[field]);
+  }).join(","))].join("\r\n");
+  saveBlob(`azure-findings-${result.assessmentId}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
+}
+
+function downloadClientReport(target, result) {
+  const content = target.innerHTML.replace(/<button[^>]*id="download-(?:report|findings)"[^>]*>.*?<\/button>/g, "");
+  const reportHtml = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Azure Allocation Assessment</title><style>body{font:14px Arial,sans-serif;color:#182a35;max-width:1100px;margin:40px auto;padding:0 24px}h1{font:32px Georgia,serif}h2{font-size:18px;margin:30px 0 10px}.eyebrow{font-size:10px;letter-spacing:1px;color:#157d65;font-weight:bold}.report-head{display:flex;justify-content:space-between;align-items:start;border-bottom:1px solid #dce6e2;padding-bottom:12px}.report-head h3{font-size:20px;margin:0 0 6px}.report-head p,.footnote{font-size:11px;color:#64777c;line-height:1.6}.policy-summary{display:grid;gap:6px;background:#f6f9f8;padding:14px;margin:14px 0;border-radius:6px;font-size:11px;color:#64777c}.policy-summary strong{color:#182a35}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.metric{padding:16px;background:#f6f9f8;border:1px solid #edf1ef;border-radius:7px}.metric span,.metric small{display:block;color:#64777c;font-size:10px;margin-bottom:8px}.metric strong{font-size:22px}.bar-label{display:flex;justify-content:space-between;font-size:11px;margin:20px 0 8px}.bar{height:8px;background:#f2dcd3;border-radius:9px;overflow:hidden}.bar>span{height:100%;display:block;background:#157d65}.section-heading{margin:25px 0 10px}table{width:100%;border-collapse:collapse;font-size:10px}td,th{text-align:left;padding:9px;border-bottom:1px solid #dce6e2;vertical-align:top}th{background:#f6f9f8}.tag-bad{color:#a54b37}.tag-good{color:#14765f}.action-note{display:block;color:#64777c;margin-top:5px}.footnote{margin-top:14px}@media(max-width:700px){.metrics{grid-template-columns:1fr}.report-head{display:block}}</style></head><body><p class="eyebrow">FINOPS TOOLKIT · AZURE</p><h1>Allocation & Tagging Assessment</h1><p>Generated ${escapeHtml(new Date().toLocaleString())}</p>${content}</body></html>`;
+  saveBlob("azure-allocation-assessment.html", reportHtml, "text/html;charset=utf-8");
+}
+
+function saveBlob(filename, content, contentType) {
+  const url = URL.createObjectURL(new Blob([content], { type: contentType }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+}
+
+
+// ---- policy.js ----
+function parseAllocationPolicy(tagKey, requiredText = "", allowedText = "") {
+  const allocationKey = String(tagKey ?? "").trim();
+  if (!allocationKey) throw new Error("Enter the allocation tag key to assess.");
+  const requiredTags = [...new Set(String(requiredText).split(/[\n,]/).map(key => key.trim()).filter(Boolean))];
+  const allowedValues = {};
+  for (const line of String(allowedText).split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const separator = line.indexOf("=");
+    if (separator < 1) throw new Error(`Allowed value rule is invalid: “${line}”. Use TagKey=value1|value2.`);
+    const key = line.slice(0, separator).trim();
+    const values = line.slice(separator + 1).split("|").map(value => value.trim()).filter(Boolean);
+    if (!key || !values.length) throw new Error(`Allowed value rule is incomplete: “${line}”.`);
+    if (Object.keys(allowedValues).some(existing => existing.toLowerCase() === key.toLowerCase())) throw new Error(`Allowed value rule for “${key}” is duplicated.`);
+    allowedValues[key] = [...new Set(values)];
+  }
+  return { tagKey: allocationKey, requiredTags, allowedValues };
+}
+
+
+// ---- main.js ----
+
+
+
+
+const fileInput = document.getElementById("file-input");
+const inventoryInput = document.getElementById("inventory-file");
+const scopeInput = document.getElementById("scope-file");
+const tagInput = document.getElementById("tag-key");
+const requiredTagsInput = document.getElementById("required-tags");
+const allowedValuesInput = document.getElementById("allowed-values");
+const analyzeButton = document.getElementById("analyze");
+const status = document.getElementById("status");
+const report = document.getElementById("report");
+const empty = document.getElementById("empty-state");
+const dropzone = document.getElementById("dropzone");
+let selectedFile = null;
+let selectedInventoryFile = null;
+let selectedScopeFile = null;
+let selectedText = null;
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files?.[0];
+  setFile(file);
+  fileInput.value = "";
+});
+inventoryInput.addEventListener("change", () => {
+  selectedInventoryFile = setOptionalFile(inventoryInput.files?.[0], "inventory-name", "resource inventory");
+  inventoryInput.value = "";
+  if (selectedFile && selectedInventoryFile) setStatus("Resource inventory ready. Click Analyze export when your inputs are ready.");
+});
+scopeInput.addEventListener("change", () => {
+  selectedScopeFile = setOptionalFile(scopeInput.files?.[0], "scope-name", "hierarchy mappings");
+  scopeInput.value = "";
+  if (selectedFile && selectedScopeFile) setStatus("Hierarchy mappings ready. Click Analyze export when your inputs are ready.");
+});
+for (const event of ["dragenter", "dragover"]) dropzone.addEventListener(event, e => { e.preventDefault(); dropzone.classList.add("dragover"); });
+for (const event of ["dragleave", "drop"]) dropzone.addEventListener(event, e => { e.preventDefault(); dropzone.classList.remove("dragover"); });
+dropzone.addEventListener("drop", e => setFile(e.dataTransfer.files?.[0]));
+analyzeButton.addEventListener("click", () => selectedFile && analyzeFile(selectedFile));
+document.getElementById("sample-button").addEventListener("click", () => analyzeText(sampleCsv(), "sample-azure-cost-export.csv"));
+
+function setFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".csv") || file.size > 50_000_000) {
+    selectedFile = null; selectedText = null; analyzeButton.disabled = true;
+    document.getElementById("file-name").textContent = "Your file is analyzed locally and is not uploaded.";
+    document.getElementById("file-summary").textContent = "";
+    dropzone.classList.remove("has-file");
+    setStatus(file.size > 50_000_000 ? "This file exceeds the 50 MB local analysis limit." : "Please choose a CSV export file.", true);
+    return;
+  }
+  selectedFile = file;
+  selectedText = null;
+  dropzone.classList.add("has-file");
+  document.getElementById("file-summary").textContent = "Checking CSV headers…";
+  document.getElementById("file-name").textContent = file.name;
+  analyzeButton.disabled = true;
+  setStatus("Checking the selected file locally…");
+  readFileText(file).then(text => {
+    if (selectedFile !== file) return;
+    const records = parseCsv(text);
+    const profile = detectCostProfile(records);
+    const columns = detectColumns(records);
+    selectedText = text;
+    document.getElementById("file-summary").textContent = `${records.length.toLocaleString()} data rows · Cost: ${columns.cost} · ${columns.currency || "Currency not provided"} · ${profile.profile}`;
+    analyzeButton.disabled = false;
+    setStatus(`File ready. Set the client policy if needed, then click Analyze export.`);
+  }).catch(error => {
+    if (selectedFile !== file) return;
+    selectedText = null;
+    document.getElementById("file-summary").textContent = "File could not be prepared.";
+    analyzeButton.disabled = true;
+    showAnalysisError(error.message || "Could not read this CSV.");
+  });
+}
+
+async function analyzeFile(file) {
+  analyzeButton.disabled = true;
+  setStatus("Reading export…");
+  try {
+    const inventoryRecords = selectedInventoryFile ? parseCsv(await readFileText(selectedInventoryFile)) : [];
+    const scopeRecords = selectedScopeFile ? parseCsv(await readFileText(selectedScopeFile)) : [];
+    const context = {
+      inventory: inventoryRecords.length ? normalizeAzureInventory(inventoryRecords) : [],
+      scopes: scopeRecords.length ? normalizeAzureScopes(scopeRecords) : []
+    };
+    const text = selectedText ?? await readFileText(file);
+    analyzeText(text, file.name, context);
+  }
+  catch (error) { showAnalysisError(error.message || "Could not read this file."); }
+  finally { analyzeButton.disabled = !(selectedFile && selectedText); }
+}
+
+function readFileText(file) {
+  if (typeof file.text === "function") return file.text();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("The browser could not read this file."));
+    reader.readAsText(file);
+  });
+}
+
+function analyzeText(text, filename, context = {}) {
+  try {
+    const records = parseCsv(text);
+    const columns = detectColumns(records);
+    const profile = detectCostProfile(records);
+    const rows = normalizeAzureRows(records, columns);
+    const policy = parseAllocationPolicy(tagInput.value, requiredTagsInput.value, allowedValuesInput.value);
+    const result = analyzeAllocation(rows, policy.tagKey, policy, { ...context, profile, filename });
+    empty.hidden = true;
+    report.hidden = false;
+    renderReport(result, report);
+    document.getElementById("file-name").textContent = filename;
+    document.getElementById("file-summary").textContent = filename === "sample-azure-cost-export.csv" ? `Sample dataset · ${result.recordCount} rows · ${result.costColumn} · ${result.currency}` : document.getElementById("file-summary").textContent;
+    setStatus(`Analyzed ${result.recordCount.toLocaleString()} valid records · ${profile.profile}${profile.warnings.length ? ` · ${profile.warnings.join(" ")}` : ""}${result.skippedCount ? ` · skipped ${result.skippedCount} invalid cost rows` : ""}.`);
+  } catch (error) { showAnalysisError(error.message || "Could not analyze this export."); }
+}
+
+function showAnalysisError(message) {
+  const safeMessage = String(message).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+  empty.hidden = true;
+  report.hidden = false;
+  report.innerHTML = `<div class="analysis-error"><span class="error-mark" aria-hidden="true">!</span><p class="eyebrow">COULDN’T BUILD THE ALLOCATION PICTURE</p><h3>We couldn’t analyze this file.</h3><p>${safeMessage}</p><p>Use an Azure Cost Management CSV export with a supported cost column, such as <strong>CostInBillingCurrency</strong>, <strong>Cost</strong>, or <strong>PreTaxCost</strong>.</p><button class="text-button" id="try-sample">Try the sample file instead →</button></div>`;
+  setStatus(message, true);
+  analyzeButton.disabled = !(selectedFile && selectedText);
+  document.getElementById("try-sample").addEventListener("click", () => analyzeText(sampleCsv(), "sample-azure-cost-export.csv"));
+}
+
+function setStatus(message, error = false) { status.textContent = message; status.classList.toggle("error", error); }
+
+function setOptionalFile(file, labelId, description) {
+  if (!file) return null;
+  if (!file.name.toLowerCase().endsWith(".csv") || file.size > 50_000_000) {
+    const message = file.size > 50_000_000 ? `The ${description} file exceeds the 50 MB limit.` : `Choose a CSV file for the ${description}.`;
+    document.getElementById(labelId).textContent = "Not selected";
+    setStatus(message, true);
+    return null;
+  }
+  document.getElementById(labelId).textContent = file.name;
+  return file;
+}
+
+function sampleCsv() {
+  return `Date,SubscriptionName,ResourceId,ServiceName,CostInBillingCurrency,BillingCurrency,Tags\n2026-09-01,Production,/subscriptions/111/resourceGroups/rg-app/providers/Microsoft.Compute/virtualMachines/vm-api,Virtual Machines,428.70,EUR,"{\""\"CostCenter\""\":\""\"CC-210\""\",\""\"Environment\""\":\""\"Production\""}"\n2026-09-01,Production,/subscriptions/111/resourceGroups/rg-data/providers/Microsoft.Storage/storageAccounts/stdata,Storage,92.15,EUR,"{\""\"Environment\""\":\""\"Production\""}"\n2026-09-01,Shared,/subscriptions/222/resourceGroups/rg-net/providers/Microsoft.Network/virtualNetworks/vnet-hub,Virtual Network,185.40,EUR,"{\""\"CostCenter\""\":\""\"CC-100\""}"\n2026-09-01,Shared,,Bandwidth,64.25,EUR,\n2026-09-01,Development,/subscriptions/333/resourceGroups/rg-test/providers/Microsoft.Compute/virtualMachines/vm-test,Virtual Machines,-12.50,EUR,"{\""\"CostCenter\""\":\""\"CC-310\""}"`;
+}
+
+
+})();
+</script>
+</body>
+</html>
+
+
